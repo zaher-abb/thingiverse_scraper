@@ -43,9 +43,9 @@ while condition:
     try:
         driver.find_element_by_xpath("//div[@class='Pagination__button--2X-2z Pagination__more--24exV']").click()
 
-        testTemp+=1
-        if testTemp >=1 :
-            break
+        # testTemp+=1
+        # if testTemp >=1 :
+        #     break
         sleep(3)
     except Exception as e:
         condition = False
