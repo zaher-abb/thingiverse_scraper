@@ -47,6 +47,24 @@ driver = webdriver.Chrome("D:\ChromDriver\chromedriver_win32\chromedriver.exe")
 #         condition = False
 #         print(e)
 
+
+
+
+
+# driver.get('https://www.thingiverse.com/thing:1278865')
+sleep(5)
+# not working well
+# comments
+# driver.find_element_by_xpath("(//div[@class='MetricButton__tabButton--2rvo1'])[2]").click()
+# comments=[]
+# sleep(4)
+# list_of_comments = driver.find_elements_by_class_name('ThingCommentsList__commentContainer--EjmOU')
+# for i in list_of_comments :
+#    print(i.find_element_by_class_name('ThingComment__modelName--Vqvbz'))
+# print(comments)
+
+
+
 url_list = []
 # save all products urls from 3d printing in csv file
 with open('Products_urls.csv','rt')as f:
@@ -70,25 +88,43 @@ designs_Data=[]
 user_Data=[]
 
 temp=0
-for i in list(url_list) :
+for i in list(url_list[:2]) :
     try:
         temp+=1
         print(temp)
         driver.get(i)
         sleep(5)
+
+
+
+
         # name
         product_name = driver.find_element_by_class_name('ThingPage__modelName--3CMsV').text
+
+        # Summary
+        summary_of_product = driver.find_element_by_xpath("//div[@class='ThingPage__description--14TtH']//p[1]").text
+        created_at = driver.find_element_by_xpath(
+            '//*[@id="react-app"]/div/div/div/div[5]/div[1]/div/div[1]/div/div[2]').text
+        created_at = created_at.split(" ", 2)[2:][0]
+
+        print_Settings=x=driver.find_elements_by_class_name('ThingPage__preHistory--312bi')
+        words = [i.text for i in print_Settings]
+        # print Settings
+        print_Settings_string = ''.join(words)
+
+
+
+
+
+
+
         # owner
         owner_profile_url = driver.find_element_by_xpath(
             '//*[@id="react-app"]/div/div/div/div[5]/div[1]/div/div[1]/div/div[2]/a').get_attribute('href')
         owner_name= driver.find_element_by_xpath(
             '//*[@id="react-app"]/div/div/div/div[5]/div[1]/div/div[1]/div/div[2]/a').text
 
-        # Summary
-        summary_of_product = driver.find_element_by_xpath("//div[@class='ThingPage__description--14TtH']//p[1]").text
-        created_at=driver.find_element_by_xpath('//*[@id="react-app"]/div/div/div/div[5]/div[1]/div/div[1]/div/div[2]').text
-        created_at=created_at.split(" ", 2)[2:][0]
-        print(created_at)
+
         driver.find_element_by_xpath("(//div[@class='MetricButton__tabButton--2rvo1'])[2]").click()
 
         sleep(4)
@@ -109,6 +145,7 @@ for i in list(url_list) :
         number_of_created_products=driver.find_element_by_xpath("//div[@id='react-app']/div[1]/div[1]/div[1]/div[4]/div[2]/div[1]/div[1]/div[2]/div[1]").text
 
         sleep(3)
+
         # get list of urls of followers
         get_followers_url = driver.find_element_by_xpath(
             '//*[@id="react-app"]/div/div/div/div[4]/div[1]/div[1]/div[3]/a[1]').get_attribute('href')
@@ -121,23 +158,23 @@ for i in list(url_list) :
             followers_urls_list.append(i.get_attribute('href'))
 
         users_likes=driver.find_elements_by_class_name('ThingCardBody__cardBodyWrapper--ba5pu')
-        print(users_likes)
+
         for i in users_likes :
             users_likes.append(i.get_attribute('href'))
-        print(users_likes)
-        list_of_products.append((product_name,created_at,summary_of_product,owner_name,owner_profile_url,number_of_created_products,users_url_who_writes_comments,followers_urls_list,len(followers_urls_list)))
+
+        list_of_products.append((product_name,created_at,summary_of_product,print_Settings_string,owner_name,owner_profile_url,number_of_created_products,users_url_who_writes_comments,followers_urls_list,len(followers_urls_list)))
 
 
         user_Data.append((owner_name,owner_profile_url,number_of_created_products,users_url_who_writes_comments,followers_urls_list,len(followers_urls_list),users_likes))
 
-        designs_Data.append((product_name,created_at,summary_of_product))
+        designs_Data.append((product_name,created_at,summary_of_product,print_Settings_string))
     except Exception as e :
         print(e)
         pass
 
 
 
-df = pd.DataFrame(data=list_of_products,columns=['Product_name','created_at','summary','owner_name','owner_profile_url',
+df = pd.DataFrame(data=list_of_products,columns=['Product_name','created_at','summary','print_Settings','owner_name','owner_profile_url',
                                                  'number_of_created_products','users_Profile_who_writes_comments','followers','followers_count'])
 
 
@@ -145,10 +182,10 @@ df = pd.DataFrame(data=list_of_products,columns=['Product_name','created_at','su
 users_data_frame=pd.DataFrame(data=user_Data,columns=['owner_name','owner_profile_url',
                                                  'number_of_created_products','users_Profile_who_writes_comments','followers','followers_count','users_likes'])
 
-designs_Data_frame=pd.DataFrame(data=designs_Data,columns=['Product_name','created_at','summary'])
+designs_Data_frame=pd.DataFrame(data=designs_Data,columns=['Product_name','created_at','summary','print_Settings'])
 
 # how much product has the user created
-product_counted = df['owner_name'].value_counts()[:10]
+# product_counted = df['owner_name'].value_counts()[:10]
 
 
 
@@ -160,11 +197,11 @@ product_counted = df['owner_name'].value_counts()[:10]
 
 
 
-sorted_lead_User_by_followersNumber = df.sort_values(by=['followers_count'], ascending=False)
-
-df.set_option('display.max_columns',8)
-df.set_option("display.max_colwidth", None)
-print(sorted_lead_User_by_followersNumber)
+# sorted_lead_User_by_followersNumber = df.sort_values(by=['followers_count'], ascending=False)
+#
+# df.set_option('display.max_columns',8)
+# df.set_option("display.max_colwidth", None)
+# print(sorted_lead_User_by_followersNumber)
 # storing data in JSON format
 
 df.to_json('a.json', orient='index')
