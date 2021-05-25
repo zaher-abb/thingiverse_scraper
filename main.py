@@ -47,24 +47,6 @@ driver = webdriver.Chrome("D:\ChromDriver\chromedriver_win32\chromedriver.exe")
 #         condition = False
 #         print(e)
 
-
-
-
-
-# driver.get('https://www.thingiverse.com/thing:1278865')
-sleep(5)
-# not working well
-# comments
-# driver.find_element_by_xpath("(//div[@class='MetricButton__tabButton--2rvo1'])[2]").click()
-# comments=[]
-# sleep(4)
-# list_of_comments = driver.find_elements_by_class_name('ThingCommentsList__commentContainer--EjmOU')
-# for i in list_of_comments :
-#    print(i.find_element_by_class_name('ThingComment__modelName--Vqvbz'))
-# print(comments)
-
-
-
 url_list = []
 # save all products urls from 3d printing in csv file
 with open('Products_urls.csv','rt')as f:
@@ -96,8 +78,6 @@ for i in list(url_list[:2]) :
         sleep(5)
 
 
-
-
         # name
         product_name = driver.find_element_by_class_name('ThingPage__modelName--3CMsV').text
 
@@ -113,11 +93,6 @@ for i in list(url_list[:2]) :
         print_Settings_string = ''.join(words)
 
 
-
-
-
-
-
         # owner
         owner_profile_url = driver.find_element_by_xpath(
             '//*[@id="react-app"]/div/div/div/div[5]/div[1]/div/div[1]/div/div[2]/a').get_attribute('href')
@@ -125,19 +100,75 @@ for i in list(url_list[:2]) :
             '//*[@id="react-app"]/div/div/div/div[5]/div[1]/div/div[1]/div/div[2]/a').text
 
 
+        # click comments button
         driver.find_element_by_xpath("(//div[@class='MetricButton__tabButton--2rvo1'])[2]").click()
+        comments = []
+
+        temp = 0
+        sleep(5)
+        condition = True
+        # get throw all comments  [ View More Comments ]
+        while condition:
+            try:
+                driver.find_element_by_xpath("//button[text()='View More Comments']").click()
+                sleep(5)
+            except Exception as e:
+                condition = False
 
         sleep(4)
-        list_of_comments = driver.find_elements_by_class_name('ThingComment__modelName--Vqvbz')
 
-        # create list of comments from a product
+        # get the whole list of comments
+        list_of_comments = driver.find_elements_by_class_name('ThingCommentsList__commentContainer--EjmOU')
+
         for i in list_of_comments:
-            users_url_who_writes_comments.append(i.get_property('href'))
+            try:
+                comment = i.find_element_by_class_name('ThingComment__commentBody--2xT45').text
+                temp += 1
+                user = i.find_element_by_xpath(
+                    "(//div[@class='ThingComment__headerWrapper--3KNll'])[{}]".format(temp)).text.split("\n", 2)
+                user_name = user[0]
+                wrote_at = user[1]
+                comments.append((comment, user_name, wrote_at))
+            except Exception as e:
+                pass
+
+        sleep(4)
+        # create list of users url who wrote a comments on a product
+        for i in driver.find_elements_by_class_name('ThingComment__modelName--Vqvbz'):
+                users_url_who_writes_comments.append(i.get_property('href'))
         sleep(3)
 
         owner_profile = driver.find_element_by_xpath(
-            "//div[@class='ThingPage__gallery--SnBAG']//div[2]/a").get_attribute('href')
+                "//div[@class='ThingPage__gallery--SnBAG']//div[2]/a").get_attribute('href')
         sleep(1)
+
+        comments = []
+
+        temp = 0
+        sleep(5)
+        condition = True
+        while condition:
+            try:
+                driver.find_element_by_xpath("//button[text()='View More Comments']").click()
+                sleep(5)
+            except Exception as e:
+                condition = False
+
+        sleep(4)
+        list_of_comments = driver.find_elements_by_class_name('ThingCommentsList__commentContainer--EjmOU')
+
+        for i in list_of_comments:
+            try:
+                comment = str(i.find_element_by_class_name('ThingComment__commentBody--2xT45').text)
+                comment= comment.replace('\n'," ")
+                temp += 1
+                user = i.find_element_by_xpath(
+                    "(//div[@class='ThingComment__headerWrapper--3KNll'])[{}]".format(temp)).text.split("\n", 2)
+                user_name = user[0]
+                wrote_at = user[1]
+                comments.append((comment, user_name, wrote_at))
+            except Exception as e:
+                pass
 
         #  get into the owner Profile
         driver.get(owner_profile)
@@ -167,7 +198,7 @@ for i in list(url_list[:2]) :
 
         user_Data.append((owner_name,owner_profile_url,number_of_created_products,users_url_who_writes_comments,followers_urls_list,len(followers_urls_list),users_likes))
 
-        designs_Data.append((product_name,created_at,summary_of_product,print_Settings_string))
+        designs_Data.append((product_name,created_at,summary_of_product,print_Settings_string,comments))
     except Exception as e :
         print(e)
         pass
@@ -182,7 +213,7 @@ df = pd.DataFrame(data=list_of_products,columns=['Product_name','created_at','su
 users_data_frame=pd.DataFrame(data=user_Data,columns=['owner_name','owner_profile_url',
                                                  'number_of_created_products','users_Profile_who_writes_comments','followers','followers_count','users_likes'])
 
-designs_Data_frame=pd.DataFrame(data=designs_Data,columns=['Product_name','created_at','summary','print_Settings'])
+designs_Data_frame=pd.DataFrame(data=designs_Data,columns=['Product_name','created_at','summary','print_Settings','comments'])
 
 # how much product has the user created
 # product_counted = df['owner_name'].value_counts()[:10]
@@ -204,10 +235,10 @@ designs_Data_frame=pd.DataFrame(data=designs_Data,columns=['Product_name','creat
 # print(sorted_lead_User_by_followersNumber)
 # storing data in JSON format
 
-df.to_json('a.json', orient='index')
+designs_Data_frame.to_json('a.json', orient='index',default_handler=str)
 
 # reading the JSON file
-df = pd.read_json('a.json', orient='index')
+designs_Data_frame = pd.read_json('a.json', orient='index')
 # Pretty Printing JSON string back
 
 
