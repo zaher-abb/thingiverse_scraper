@@ -5,6 +5,8 @@ import csv
 from selenium.webdriver.common.keys import Keys
 import json
 
+
+from itertools import zip_longest
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
 
@@ -103,13 +105,15 @@ list_of_products = []
 followers_urls_list = []
 user_Data = []
 designs_Data = []
-for i in list(url_list[100:150]) :
+count=0
+for url in list(url_list[500:1000]) :
 
     try:
 
-        # temp+=1
-        # print(temp)
-        driver.get(i)
+        count+=1
+        print('count in ')
+        print(count)
+        driver.get(url)
         sleep(5)
         # name
         product_name = driver.find_element_by_class_name('ThingPage__modelName--3CMsV').text
@@ -134,13 +138,16 @@ for i in list(url_list[100:150]) :
         # owner
         owner_profile_url = driver.find_element_by_xpath(
             '//*[@id="react-app"]/div/div/div/div[5]/div[1]/div/div[1]/div/div[2]/a').get_attribute('href')
-
+        print('commenst')
         # get owner name
         owner_name= driver.find_element_by_xpath(
             '//*[@id="react-app"]/div/div/div/div[5]/div[1]/div/div[1]/div/div[2]/a').text
+        comment_url= str(url) + '/comments'
+        print(comment_url)
+        driver.get(comment_url)
 
-        # click comments button
-        driver.find_element_by_xpath("(//div[@class='MetricButton__tabButton--2rvo1'])[2]").click()
+
+
 
         comments = []
         temp2 = 0
@@ -158,11 +165,11 @@ for i in list(url_list[100:150]) :
         # get the whole list of comments
         list_of_comments = driver.find_elements_by_class_name('ThingCommentsList__commentContainer--EjmOU')
 
-        for i in list_of_comments:
+        for c in list_of_comments:
             try:
-                comment = i.find_element_by_class_name('ThingComment__commentBody--2xT45').text
+                comment = c.find_element_by_class_name('ThingComment__commentBody--2xT45').text
                 temp2 += 1
-                user  = i.find_element_by_xpath(
+                user  = c.find_element_by_xpath(
                     "(//div[@class='ThingComment__headerWrapper--3KNll'])[{}]".format(temp2)).text.split("\n", 2)
                 user_name = user[0]
                 wrote_at  = user[1]
@@ -173,26 +180,28 @@ for i in list(url_list[100:150]) :
         sleep(3)
 
         # create list of users url who wrote a comments on a product
-        for i in driver.find_elements_by_class_name('ThingComment__modelName--Vqvbz'):
-                users_url_who_writes_comments.append(i.get_property('href'))
+        for user_comments in driver.find_elements_by_class_name('ThingComment__modelName--Vqvbz'):
+                users_url_who_writes_comments.append(user_comments.get_property('href'))
+        print(' out of comments 2')
+        sleep(2)
+        temp_url = str(str(url) + '/makes')
+        print(temp_url)
+        driver.get(temp_url)
         sleep(4)
 
 
         # makes_Number
-        makes_num = int(driver.find_element_by_xpath("(//div[@class='MetricButton__tabButton--2rvo1'])[3]/div[1]").text)
+        makes_num = int(driver.find_element_by_xpath("(//div[@class='MetricButton__tabButton--2rvo1 MetricButton__selected--BGAr0'])/div[1]").text)
         print('makes')
+
+
         print(makes_num)
-        htmlelement = driver.find_element_by_tag_name('html')
-        htmlelement.send_keys(Keys.UP)
-        sleep(4)
-        # makes
-        driver.find_element_by_xpath("(//div[@class='MetricButton__tabButton--2rvo1'])[3]").click()
 
         sleep(4)
 
         # scroll down
 
-
+        #makes
         while True:
             try:
                 htmlelement = driver.find_element_by_tag_name('html')
@@ -202,8 +211,13 @@ for i in list(url_list[100:150]) :
                 print(makes_num/10)
                 if makes_num < 20 :
                     makes_num= 100
-                for i in range(int(makes_num/10)):
+                for num in range(int(makes_num / 10)):
                     htmlelement.send_keys(Keys.END)
+                    sleep(2)
+                    htmlelement.send_keys(Keys.END)
+                    sleep(2)
+                    htmlelement.send_keys(Keys.END)
+                    sleep(1)
                     all_makes_temp = driver.find_elements_by_class_name("ThingCardBody__cardBodyWrapper--ba5pu")
                     if(len(all_makes_temp) < 18 ):
                         break
@@ -212,7 +226,7 @@ for i in list(url_list[100:150]) :
                     sleep(5)
                 break
 
-                # wait.until(EC.visibility_of_element_located((By.XPATH, "//*[. = 'Loading...']")))
+
             except TimeoutException:
                 print('Exception makes ')
                 break  # not more posts were loaded - exit the loop
@@ -221,39 +235,55 @@ for i in list(url_list[100:150]) :
         all_makes_url = driver.find_elements_by_class_name("ThingCardBody__cardBodyWrapper--ba5pu")
         print("all makes ")
         print(len(all_makes_url))
+        print('test1')
         all_makes_user=driver.find_elements_by_class_name("ThingCardHeader__avatarWrapper--1Jliv")
+        print('test2')
         all_makes_created_at=driver.find_elements_by_class_name("ThingCardHeader__cardCreatedAfter--3xS2o")
+        print('test3')
         sleep(2)
         all_makes=[]
-        for i ,y,z  in zip(all_makes_user,all_makes_url,all_makes_created_at) :
-            mixed_by_url=i.get_attribute('href')
+        for x , y, z  in list(zip_longest(all_makes_user, all_makes_url, all_makes_created_at)) :
+          try:
+
+            mixed_by_url=x.get_attribute('href')
             mixed_by = str(mixed_by_url).rsplit('/',1)[1]
 
             make_created_at=z.text
             make_product_url = y.get_attribute('href')
 
             all_makes.append((owner_name, mixed_by,make_product_url,make_created_at))
+          except IndexError as e:
+              print(e)
+              pass
+
             # print(all_makes)
+        print('test4')
 
-
-
-        # TODO : fix remeix , button click
-        # Remix
-        htmlelement = driver.find_element_by_tag_name('html')
-        htmlelement.send_keys(Keys.UP)
+        sleep(2)
         # Remix_Number
+        remixes_url=str(str(url) + '/remixes')
+        print(remixes_url)
+        driver.get(remixes_url)
+        sleep(4)
         print('remix')
 
-        remixes_num = int(driver.find_element_by_xpath('(//*[@id="react-app"]/div/div/div/div[6]/div[1]/div[5]/div[1])').text)
-        # makes
+
+        test_temp=str(driver.find_element_by_xpath("//div[@class='MetricButton__tabButton--2rvo1 MetricButton__selected--BGAr0']/div[1]").text)
+        if(test_temp==''):
+            print('remix number')
+            remixes_num=int(driver.find_element_by_xpath("//div[@class='MetricButton__tabButton--2rvo1'][5]/div[1]").text)
+            print(remixes_num)
+        else:
+            remixes_num = int(driver.find_element_by_xpath("//div[@class='MetricButton__tabButton--2rvo1 MetricButton__selected--BGAr0']/div[1]").text)
+
+        print('remixes number')
+
+        # remakes
         print(remixes_num)
-        driver.find_element_by_xpath("(//div[@class='MetricButton__tabButton--2rvo1'])[5]").click()
+
+
 
         sleep(4)
-        # scroll down
-        print('remixes')
-
-        sleep(3)
         while True:
             try:
                 htmlelement = driver.find_element_by_tag_name('html')
@@ -263,7 +293,7 @@ for i in list(url_list[100:150]) :
                 print(remixes_num / 10)
                 if remixes_num < 20:
                      remixes_num = 100
-                for i in range(int(remixes_num / 10)):
+                for num in range(int(remixes_num / 10)):
                     htmlelement.send_keys(Keys.END)
                     all_remixes_temp = driver.find_elements_by_class_name("ThingCardBody__cardBodyWrapper--ba5pu")
                     if (len(all_remixes_temp) < 18):
@@ -275,7 +305,7 @@ for i in list(url_list[100:150]) :
 
             except TimeoutException:
                 print('Exception remixes ')
-                break  # not more posts were loaded - exit the loop
+                pass  # not more posts were loaded - exit the loop
 
         # makes
         all_remixes_url = driver.find_elements_by_class_name("ThingCardBody__cardBodyWrapper--ba5pu")
@@ -285,50 +315,41 @@ for i in list(url_list[100:150]) :
         all_remixes_created_at = driver.find_elements_by_class_name("ThingCardHeader__cardCreatedAfter--3xS2o")
         sleep(2)
         all_remixes = []
-        for i, y, z in zip(all_remixes_user, all_remixes_url, all_remixes_created_at):
-                remixes_by_url = i.get_attribute('href')
+
+        for x1, y1, z1 in list(zip_longest(all_remixes_user, all_remixes_url, all_remixes_created_at)):
+              try:
+
+                remixes_by_url = x1.get_attribute('href')
                 remixes_by = str(remixes_by_url).rsplit('/', 1)[1]
-
-                remixes_created_at = z.text
-                remixes_product_url = y.get_attribute('href')
-
+                remixes_created_at = z1.text
+                remixes_product_url = y1.get_attribute('href')
                 all_remixes.append((owner_name, remixes_by, remixes_product_url, remixes_created_at))
-
-
+              except Exception as e:
+                  print(e)
+                  pass
 
         print(all_remixes)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
         sleep(2)
+        print('test5')
         #  get into the owner Profile
         driver.get(owner_profile_url)
         sleep(2)
-        number_of_created_products=driver.find_element_by_xpath("//div[@id='react-app']/div[1]/div[1]/div[1]/div[4]/div[2]/div[1]/div[1]/div[2]/div[1]").text
-
+        number_of_created_products=int(driver.find_element_by_xpath("//div[@id='react-app']/div[1]/div[1]/div[1]/div[4]/div[2]/div[1]/div[1]/div[2]/div[1]").text)
+        print('test6')
         sleep(2)
 
         # get list of urls of followers
         get_followers_url = driver.find_element_by_xpath(
             '//*[@id="react-app"]/div/div/div/div[4]/div[1]/div[1]/div[3]/a[1]').get_attribute('href')
         sleep(1)
+        print('test7')
         driver.get(get_followers_url)
-
+        sleep(3)
         get_all_followers_urls = driver.find_elements_by_class_name('user-header')
-
-        for i in get_all_followers_urls :
-            followers_urls_list.append(i.get_attribute('href'))
+        print('test8')
+        for follower_url in get_all_followers_urls :
+            followers_urls_list.append(follower_url.get_attribute('href'))
 
 
         # TODO : get user likes (products) from his Profile
@@ -339,17 +360,14 @@ for i in list(url_list[100:150]) :
 
         list_of_products.append((product_name,created_at,summary_of_product,print_Settings_string,owner_name,
                                  owner_profile_url,number_of_created_products,users_url_who_writes_comments,
-                                 followers_urls_list,len(followers_urls_list),len(all_makes),all_makes),len(all_remixes),all_remixes)
-
+                                 followers_urls_list,len(followers_urls_list),len(all_makes),all_makes,len(all_remixes),all_remixes))
 
         user_Data.append((owner_name,owner_profile_url,number_of_created_products,users_url_who_writes_comments,followers_urls_list,len(followers_urls_list)))
 
-
-
-        designs_Data.append((product_name,created_at,summary_of_product,print_Settings_string,comments,len(all_makes),all_makes),len(all_remixes),all_remixes)
+        designs_Data.append((product_name,created_at,summary_of_product,print_Settings_string,comments,len(all_makes),all_makes,len(all_remixes),all_remixes))
     except Exception as e :
             print(e)
-            continue
+            pass
 
 all_data_frame = pd.DataFrame(data=list_of_products,columns=['Product_name','created_at','summary','print_Settings','owner_name','owner_profile_url',
                                                  'number_of_created_products','users_Profile_who_writes_comments','followers_profile_urls','followers_count','number_of_makes','makes','number_of_remixes','remixes'])
@@ -361,25 +379,7 @@ users_data_frame=pd.DataFrame(data=user_Data,columns=['owner_name','owner_profil
 
 designs_Data_frame=pd.DataFrame(data=designs_Data,columns=['Product_name','created_at','summary','print_Settings','comments','number_of_makes','makes','number_of_remixes','remixes'])
 
-# how much product has the user created
-# product_counted = df['owner_name'].value_counts()[:10]
 
-# sorted_lead_User_by_followersNumber = df.sort_values(by=['followers_count'], ascending=False)
-#
-# df.set_option('display.max_columns',8)
-# df.set_option("display.max_colwidth", None)
-#
-# print(sorted_lead_User_by_followersNumber)
-# storing data in JSON format
-
-designs_Data_frame.to_json('designs_Data_10.15.json', orient='index',default_handler=str)
-users_data_frame.to_json('users_Data_10.15.json', orient='index',default_handler=str)
-all_data_frame.to_json('all_data_10.15.json', orient='index',default_handler=str)
-
-# reading the JSON file
-# designs_Data_frame = pd.read_json('a.json', orient='index')
-# Pretty Printing JSON string back
-
-# pd.set_option('display.max_columns',5)
-# pd.set_option("display.max_colwidth", None)
-# print(df)
+designs_Data_frame.to_json('designs_Data_500_1000.json', orient='index',default_handler=str)
+users_data_frame.to_json('users_Data_500_1000.json', orient='index',default_handler=str)
+all_data_frame.to_json('all_data_500_1000.json', orient='index',default_handler=str)
